@@ -1,11 +1,13 @@
 import asyncio
 import telegram
+import redisdb
 
 
-async def handle_update(upd):
-    print("before", upd)
-    await asyncio.sleep(1)
-    print("after", upd)
+async def handle_update(tg_client: telegram.Bot, upd: telegram.Update):
+    user_id = upd.effective_chat.id
+    text = upd.message.text
+    if text == '/start':
+        await redisdb.add_user(user_id, upd.effective_chat.first_name, upd.effective_chat.last_name)
 
 
 class Worker:
@@ -17,7 +19,7 @@ class Worker:
     async def _worker(self):
         while True:
             upd = await self.queue.get()
-            await handle_update(upd)
+            await handle_update(self.tg_client, upd)
 
     async def start(self):
         for _ in range(self.concurrent_workers):
