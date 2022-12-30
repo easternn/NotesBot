@@ -1,11 +1,13 @@
 import asyncio
 import telegram
 import redisdb
+from random import shuffle
 
 MAX_QUESTION_LENGTH = 50
 MAX_ANSWER_LENGTH = 120
 COM_START_OK = ''
 COM_CREATE_OK = 'Введите вопрос'
+COM_QUIZ_EMPTY_LIST = 'Здесь пусто :/'
 AFTER_CREATE_QUESTION_OK = 'Ваш ответ'
 AFTER_CREATE_QUESTION_LONG = 'Вопрос не должен превышать {} символов'.format(MAX_QUESTION_LENGTH)
 AFTER_CREATE_QUESTION_QM = 'Должен стоять единственный вопросительный знак - вконце'
@@ -36,7 +38,9 @@ async def show_all_notes(tg_client: telegram.Bot, user_id, notes):
         i += 1
         question, answer = note.split('?')
         question += '?'
-        await tg_client.send_message(chat_id=user_id, text='*{}\) Вопрос:* {}\n\n*Ответ: * {}'.format(i, question, answer), parse_mode='MarkdownV2')
+        await tg_client.send_message(chat_id=user_id,
+                                     text='*{}\) Вопрос:* {}\n\n*Ответ: * {}'.format(i, question, answer),
+                                     parse_mode='MarkdownV2')
 
 
 async def COM_start(tg_client: telegram.Bot, upd: telegram.Update):
@@ -56,6 +60,36 @@ async def COM_all(tg_client: telegram.Bot, upd: telegram.Update):
     notes = await redisdb.get_notes(user_id)
     await show_all_notes(tg_client, user_id, notes)
     await redisdb.set_status(user_id, 'Default')
+
+
+async def COM_quiz(tg_client: telegram.Bot, upd: telegram.Update):
+    user_id = upd.effective_chat.id
+    notes = await redisdb.get_notes(user_id)
+    if len(notes) == 0:
+        await tg_client.send_message(chat_id=user_id, text=COM_QUIZ_EMPTY_LIST)
+        return
+    await redisdb.set_status(user_id, 'PROCESS')
+    shuffle(notes)
+    await redisdb.set_random_qrs(user_id, notes)
+    current_qr = (await redisdb.get_processed_random_qr(user_id))[0]
+    question = current_qr.split('?')[0] + "?"
+    await tg_client.send_message(chat_id=user_id, text='*Вопрос: * {}'.format(question), parse_mode='MarkdownV2')
+    await redisdb.set_status(user_id, 'Testing')
+
+
+async def COM_next(tg_client: telegram.Bot, upd: telegram.Update):
+    user_id = upd.effective_chat.id
+    status = await redisdb.get_status(user_id)
+    if status != 'Testing':
+        return
+    current_qr = (await redisdb.get_processed_random_qr(user_id))[0]
+    answer = current_qr.split('?')[1]
+    await tg_client.send_message(chat_id=user_id, text='*Ответ: * {}'.format(answer), parse_mode='MarkdownV2')
+    await redisdb.move_random_forward(user_id)
+    current_qr = (await redisdb.get_processed_random_qr(user_id))[0]
+    print(current_qr)
+    question = current_qr.split('?')[0] + "?"
+    await tg_client.send_message(chat_id=user_id, text='*Вопрос: * {}'.format(question), parse_mode='MarkdownV2')
 
 
 async def AFTER_create_question(tg_client: telegram.Bot, upd: telegram.Update):
@@ -99,15 +133,21 @@ async def handle_update(tg_client: telegram.Bot, upd: telegram.Update):
         return
     user_id = upd.effective_chat.id
     text = upd.message.text
-    await redisdb.debug(user_id)
+    status = await redisdb.get_status(user_id)
+    await redisdb.debug(user_id) # DEBUG
+    if status == 'PROCESS' and text != '/start':
+        return
     if text == '/start':
         await COM_start(tg_client, upd)
     elif text == '/create':
         await COM_create(tg_client, upd)
     elif text == '/all':
         await COM_all(tg_client, upd)
-    else:   # TEXT
-        status = await redisdb.get_status(user_id)
+    elif text == '/quiz':
+        await COM_quiz(tg_client, upd)
+    elif text == '/next':
+        await COM_next(tg_client, upd)
+    else:  # TEXT
         if status == 'Awaiting-question':
             await AFTER_create_question(tg_client, upd)
         elif status == 'Awaiting-answer':
