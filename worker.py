@@ -31,10 +31,12 @@ def validate_question(question):
 
 
 async def show_all_notes(tg_client: telegram.Bot, user_id, notes):
+    i = 0
     for note in notes:
+        i += 1
         question, answer = note.split('?')
         question += '?'
-        await tg_client.send_message(chat_id=user_id, text='{}\n\n{}'.format(question, answer))
+        await tg_client.send_message(chat_id=user_id, text='*{}\) Вопрос:* {}\n\n*Ответ: * {}'.format(i, question, answer), parse_mode='MarkdownV2')
 
 
 async def COM_start(tg_client: telegram.Bot, upd: telegram.Update):
@@ -94,7 +96,6 @@ async def AFTER_create_answer(tg_client: telegram.Bot, upd: telegram.Update):
 
 async def handle_update(tg_client: telegram.Bot, upd: telegram.Update):
     if upd is None:
-        print('dsfds')
         return
     user_id = upd.effective_chat.id
     text = upd.message.text
