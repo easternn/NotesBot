@@ -107,7 +107,6 @@ async def COM_next(tg_client: telegram.Bot, upd: telegram.Update):
     await tg_client.send_message(chat_id=user_id, text='*Ответ: * {}'.format(answer), parse_mode='MarkdownV2')
     await redisdb.move_random_forward(user_id)
     current_qr = (await redisdb.get_processed_random_qr(user_id))[0]
-    print(current_qr)
     question = current_qr.split('?')[0] + "?"
     await tg_client.send_message(chat_id=user_id, text='*Вопрос: * {}'.format(question), parse_mode='MarkdownV2')
 

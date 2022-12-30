@@ -84,7 +84,6 @@ async def increase_random_id(user_Id, random_id, length, empty_index):
 
     if random_id == 0 and empty_index != -1:
         await r.rpop("user:{}:random_qrs".format(user_Id), length - empty_index)
-        print(empty_index)
         await r.set("user:{}:empty_index".format(user_Id), -1)
 
 
