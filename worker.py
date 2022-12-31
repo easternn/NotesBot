@@ -1,11 +1,20 @@
 import asyncio
 import telegram
 import redisdb
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+
 from random import shuffle
 
 MAX_QUESTION_LENGTH = 50
 MAX_ANSWER_LENGTH = 120
-COM_START_OK = ''
+COM_START_OK = 'Привет! Здесь ты можешь создавать заметки, а потом тестировать себя. Начни с команды /create, чтобы создать первую заметку'
 COM_CREATE_OK = 'Введите вопрос'
 COM_QUIZ_EMPTY_LIST = 'Здесь пусто :/'
 COM_QUIZ_END_OK = 'Quiz закончен'
@@ -60,6 +69,7 @@ async def show_all_notes(tg_client: telegram.Bot, user_id, notes):
 async def COM_start(tg_client: telegram.Bot, upd: telegram.Update):
     user_id = upd.effective_chat.id
     await redisdb.add_user(user_id, upd.effective_chat.first_name, upd.effective_chat.last_name)
+    await tg_client.send_message(chat_id=user_id, text=COM_START_OK)
     await redisdb.set_status(user_id, 'Default')
 
 
@@ -95,6 +105,13 @@ async def COM_quiz_end(tg_client: telegram.Bot, upd: telegram.Update):
     await end_quiz(user_id)
     await tg_client.send_message(chat_id=user_id, text=COM_QUIZ_END_OK)
     await redisdb.set_status(user_id, 'Default')
+
+
+async def COM_help(tg_client: telegram.Bot, upd: telegram.Update):
+    user_id = upd.effective_chat.id
+    data = open('help.txt').read()
+    await tg_client.send_message(chat_id=user_id, text=data)
+
 
 
 async def COM_next(tg_client: telegram.Bot, upd: telegram.Update):
@@ -170,6 +187,7 @@ async def handle_update(tg_client: telegram.Bot, upd: telegram.Update):
     user_id = upd.effective_chat.id
     text = upd.message.text
     status = await redisdb.get_status(user_id)
+    logging.info('User_id: {}, text: {}, status: {}'.format(user_id, text, status))
     if status == 'PROCESS' and text != '/start':
         return
     if text == '/start':
@@ -190,13 +208,13 @@ async def handle_update(tg_client: telegram.Bot, upd: telegram.Update):
         await COM_erase(tg_client, upd)
     elif text == '/quiz_end':
         await COM_quiz_end(tg_client, upd)
+    elif text == '/help':
+        await COM_help(tg_client, upd)
     else:  # TEXT
         if status == 'Awaiting-question':
             await AFTER_create_question(tg_client, upd)
         elif status == 'Awaiting-answer':
             await AFTER_create_answer(tg_client, upd)
-
-    await redisdb.debug(user_id) # DEBUG
 
 
 class Worker:
