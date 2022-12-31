@@ -9,6 +9,5 @@ RUN pip install --upgrade python-telegram-bot --pre
 
 
 WORKDIR /data/app
-#ENV BOT_TOKEN=5837154858:AAHbb7MPsPrDx_TQ4Sv-ZgTIwiGMjJ9uV9g
 
 CMD ["python3", "main.py"]
