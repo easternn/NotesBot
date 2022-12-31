@@ -1,5 +1,9 @@
 import asyncio
+import logging
 import os
+
+with open('token.txt', 'r') as f:
+    os.environ["BOT_TOKEN"] = f.readline()
 
 from poller import Poller
 from worker import Worker

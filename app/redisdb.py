@@ -1,6 +1,6 @@
 from redis import asyncio as aioredis
 
-r = aioredis.from_url('redis://localhost', decode_responses=True)
+r = aioredis.from_url('redis://redis', port=6379, decode_responses=True)
 
 
 async def debug(user_Id):
