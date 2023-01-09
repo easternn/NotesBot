@@ -113,7 +113,6 @@ async def COM_help(tg_client: telegram.Bot, upd: telegram.Update):
     await tg_client.send_message(chat_id=user_id, text=data)
 
 
-
 async def COM_next(tg_client: telegram.Bot, upd: telegram.Update):
     user_id = upd.effective_chat.id
     status = await redisdb.get_status(user_id)

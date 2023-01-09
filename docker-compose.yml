@@ -2,11 +2,14 @@ version: '2'
 
 services:
   redis:
-    image: "redis"
+    image: "redis/redis-stack-server"
+    volumes:
+      - /home/timur/IPR/telegram_bot/redis_data:/data
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - '6379:6379'
+
   app:
     build:
       dockerfile: app/Dockerfile
