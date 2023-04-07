@@ -1,3 +1,3 @@
 # NotesBot
 
-Телеграм бот для создания заметок
+Telegram Bot for creating Notes
